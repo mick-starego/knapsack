@@ -35,14 +35,27 @@ function onStep2Submit(event) {
     runStep3();
 }
 
+function onRemoveItemClicked(itemName) {
+    itemList = itemList.filter((item) => item.name !== itemName);
+    drawItemList();
+    runStep3();
+}
+
 function updateSubmitButtonState() {
     const itemForm = document.getElementById('item-form');
     const formData = new FormData(itemForm);
     const submitButton = itemForm.querySelector('button');
 
-    const name = formData.get('name');
+    let name = formData.get('name');
+    const itemNames = itemList.map((item) => item.name);
+    if (itemNames.includes(name)) {
+        // Don't allow names that have already been used
+        name = null;
+    }
+
     const price = parseNumber(formData.get('price'));
     const category = formData.get('category');
+
     submitButton.disabled = !name || !price || !category;
 }
 
@@ -137,6 +150,9 @@ function addItem(item) {
 
     const itemCategory = clone.querySelector('.category');
     itemCategory.classList.add('category--' + item.category);
+
+    const buttonEl = clone.querySelector('.clear');
+    buttonEl.onclick = () => onRemoveItemClicked(item.name);
 
     const itemListEl = document.getElementById('item-list');
     itemListEl.prepend(clone);
