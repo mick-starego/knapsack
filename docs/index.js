@@ -36,8 +36,13 @@ function onStep2Submit(event) {
 }
 
 function onRemoveItemClicked(itemName) {
+    if (isLoading) {
+        return;
+    }
+
     itemList = itemList.filter((item) => item.name !== itemName);
     drawItemList();
+    updateSubmitButtonState();
     runStep3();
 }
 
@@ -134,7 +139,7 @@ function drawReciept() {
     } else if (!result.data?.length) {
         helpEl.innerText = 'No solutions found. Try adding more items!';
     } else {
-        helpEl.innerText = `Found ${result.numSolutions} Solutions`;
+        helpEl.innerText = `Found ${result.numSolutions.toLocaleString()} Solutions`;
         result.data.forEach(addReceiptItem);
     }
 }

@@ -12,7 +12,7 @@ function run(target, tax, itemList) {
     // Multiply prices by 100 to get integer value
     // Sort items by price, i.e [78, 105, 199]
     const calculatedItems = [...itemList]
-        .map((item) => ({...item, integerPrice: Math.trunc(item.unitPrice * 100)}))
+        .map((item) => ({ ...item, integerPrice: Math.round(item.unitPrice * 100) }))
         .sort(((a, b) => a.integerPrice - b.integerPrice));
 
     // Calculate the target value
@@ -66,7 +66,7 @@ function run(target, tax, itemList) {
         }
         data.push(col);
     }
-    
+
     // Check if solutions exist
     const [lastRow, lastPrice] = [calculatedItems.length, calculatedTarget];
     if (!data[lastRow][lastPrice]) {
@@ -76,9 +76,13 @@ function run(target, tax, itemList) {
             numSolutions: 0
         };
     }
+    console.log(data);
 
     // Use DFS to read solutions
-    const solutions = [];
+    let bestResult;
+    let bestScore = 0;
+    let numSolutions = 0;
+    const startTimeMs = Date.now();
     const stack = [[lastRow, lastPrice, []]];
     while (stack.length) {
         const [row, price, path] = stack.pop();
@@ -86,7 +90,22 @@ function run(target, tax, itemList) {
 
         // Solution found!
         if (row === 0 && price === 0) {
-            solutions.push(path);
+            const solution = buildSolution(path, calculatedItems);
+            const score = getScore(solution, calculatedItems, calculatedTarget);
+            if (score > bestScore) {
+                bestScore = score;
+                bestResult = solution;
+            }
+            numSolutions++;
+            continue;
+        }
+
+        // If we've been searching for longer than 10s, get out
+        // of here! If it's been 5s, pump the brakes to move it along.
+        const elapsedTimeMs = Date.now() - startTimeMs;
+        if (elapsedTimeMs > 10000) {
+            break;
+        } else if (elapsedTimeMs > 5000 && Math.random() < 0.2) {
             continue;
         }
 
@@ -100,27 +119,6 @@ function run(target, tax, itemList) {
             newItemCount++;
         }
     }
-
-    // Construct resulting item list from solutions
-    const results = solutions.map((path) => path
-        .map((quantity, i) => ({
-            ...calculatedItems[i],
-            quantity,
-            totalPrice: calculatedItems[i].unitPrice * quantity
-        }))
-        .filter((item) => item.quantity)
-    );
-
-    // Score all and pick the best result
-    let bestResult;
-    let bestScore = 0;
-    results.forEach((result) => {
-        const score = getScore(result, calculatedItems, calculatedTarget);
-        if (score > bestScore) {
-            bestScore = score;
-            bestResult = result;
-        }
-    });
 
     // Sort the result by category and price
     bestResult.sort((a, b) =>
@@ -146,12 +144,23 @@ function run(target, tax, itemList) {
 
     return {
         data: bestResult,
-        numSolutions: results.length
+        numSolutions
     };
 }
 
 function getNewItemCountMax(price, newItemPrice) {
     return Math.floor(price / newItemPrice);
+}
+
+function buildSolution(path, calculatedItems) {
+    // Construct item list from solutions
+    return path
+        .map((quantity, i) => ({
+            ...calculatedItems[i],
+            quantity,
+            totalPrice: calculatedItems[i].unitPrice * quantity
+        }))
+        .filter((item) => item.quantity);
 }
 
 function getScore(result, calculatedItems, calculatedTarget) {
@@ -175,7 +184,7 @@ function getScore(result, calculatedItems, calculatedTarget) {
     );
     const minSubtotal = Math.min(...categoryCounts);
     const maxSubtotal = Math.max(...categoryCounts);
-    const utilizationScore = 1 - ((maxSubtotal - minSubtotal) / result.length);
+    const utilizationScore = 1 - ((maxSubtotal - minSubtotal) / numItemsIncluded);
 
     return (3 * diversityScore) + efficiencyScore + (2 * utilizationScore);
 }
