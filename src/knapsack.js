@@ -78,7 +78,7 @@ function run(target, tax, itemList) {
     }
 
     // Use DFS to read solutions
-    let topResults;
+    let topResults = [];
     let numSolutions = 0;
     const numResultsToKeep = 25;
     const startTimeMs = Date.now();
@@ -91,14 +91,14 @@ function run(target, tax, itemList) {
         if (row === 0 && price === 0) {
             const solution = buildSolution(path, calculatedItems, tax);
             const score = getScore(solution, calculatedItems, calculatedTarget);
-            if (score > topResults[0].score) {
+            if (topResults.length < numResultsToKeep || score > topResults.at(-1).score) {
                 if (topResults.length >= numResultsToKeep) {
-                    topResults.shift();
+                    topResults.pop();
                 }
                 topResults.push({ score, solution });
-                topResults.sort((a, b) => a.score - b.score);
+                topResults.sort((a, b) => b.score - a.score);
             }
-            totalSolutions++;
+            numSolutions++;
             continue;
         }
 
@@ -132,7 +132,7 @@ function getNewItemCountMax(price, newItemPrice) {
     return Math.floor(price / newItemPrice);
 }
 
-function buildSolution(path, calculatedItem, tax) {
+function buildSolution(path, calculatedItems, tax) {
     // Construct item list from solutions
     const solution = path
         .map((quantity, i) => ({
@@ -166,15 +166,18 @@ function buildSolution(path, calculatedItem, tax) {
 }
 
 function getScore(result, calculatedItems, calculatedTarget) {
+    // Filter out tax and total
+    const solutionItems = result.filter((item) => !!item.category);
+
     // Diversity: Ratio of potential items included
-    const numUniqueItemsIncluded = result.length;
+    const numUniqueItemsIncluded = solutionItems.length;
     const totalUniqueItems = calculatedItems.length;
     const diversityScore = numUniqueItemsIncluded / totalUniqueItems;
 
     // Category utilization: Evenness of category representation
     const categories = new Set(calculatedItems.map((item) => item.category));
     const categoryItems = [...categories].map(
-        (category) => result.filter((item) => item.category === category)
+        (category) => solutionItems.filter((item) => item.category === category)
     );
 
     // Utilization by price
@@ -185,7 +188,7 @@ function getScore(result, calculatedItems, calculatedTarget) {
     const priceUtilizationScore = 1 - ((maxSubtotal - minSubtotal) / calculatedTarget);
 
     // Utilization by count
-    const totalItems = result.reduce((prev, curr) => prev + curr.quantity, 0);
+    const totalItems = solutionItems.reduce((prev, curr) => prev + curr.quantity, 0);
     const categoryCounts = categoryItems
         .map((items) => items.reduce((prev, curr) => prev + curr.quantity, 0));
     const minSubCount = Math.min(...categoryCounts);

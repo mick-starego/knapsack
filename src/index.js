@@ -146,7 +146,7 @@ function drawReciept() {
         helpEl.innerText = 'No solutions found. Try adding more items!';
     } else {
         helpEl.innerText = `Found ${result.numSolutions.toLocaleString()} Solutions`;
-        result.data[solutionPointer].forEach(addReceiptItem);
+        result.data[solutionPointer].solution.forEach(addReceiptItem);
     }
 }
 
@@ -205,4 +205,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const itemForm = document.getElementById('item-form');
     itemForm.addEventListener('input', updateSubmitButtonState);
     itemForm.addEventListener('submit', onStep2Submit);
+
+    const shuffleButton = document.getElementById('shuffle-button');
+    shuffleButton.addEventListener('click', onShuffleClicked);
 });
